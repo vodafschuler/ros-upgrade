@@ -9,7 +9,6 @@
 ## you can use your own site (local network)
 ## important NO SLASH at end of repo
 repo="https://download.mikrotik.com/routeros"
-repo="http://ros.lucky.ltg"
 
 ## routeros version to upgrade
 rosver="7.6"
@@ -75,8 +74,6 @@ fi
 echo "==============================================================================="
 for host in "${hosts[@]}"
 do
-#  rosinfo="sshpass -p ${password} ssh -p ${port} -o \"StrictHostKeyChecking no\" ${username}@${host} \"sys identi pr ; sys resource pr\""
-#  echo "$rosinfo"
   rosinfo=`sshpass -p ${password} ssh -p ${port} -o "StrictHostKeyChecking no" ${username}@${host} "sys identi pr ; sys resource pr"`
 
   arch=`echo "$rosinfo" | grep archi | cut -d ":" -f 2`
