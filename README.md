@@ -37,7 +37,7 @@ options:
    -u username   Provide username as argument (default "admin")
    -p password   Provide password as argument (security unwise)
    -P ssh-port   Provide ssh service port (default 22)
-   -v version    RouterOS version to upgrade (default 22)
+   -v version    RouterOS version to upgrade 
       hostname   Hostname list, list for multiple hostname
    -h            Print this Help.
 ```
