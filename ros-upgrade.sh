@@ -9,7 +9,6 @@
 ## you can use your own site (local network)
 ## important NO SLASH at end of repo
 repo="https://download.mikrotik.com/routeros"
-repo="http://ros.lucky.ltg"
 
 ## routeros version to upgrade
 rosver="7.6"
