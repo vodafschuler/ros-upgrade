@@ -38,7 +38,7 @@ usage()
    echo "   -u username   Provide username as argument (default \"admin\")"
    echo "   -p password   Provide password as argument (security unwise)"
    echo "   -P ssh-port   Provide ssh service port (default 22)"
-   echo "   -v version    RouterOS version to upgrade (default 22)"
+   echo "   -v version    RouterOS version to upgrade"
    echo "      hostname   Hostname list, list for multiple hostname"
    echo "   -h            Print this Help."
    echo
