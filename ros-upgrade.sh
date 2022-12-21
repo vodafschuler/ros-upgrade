@@ -9,6 +9,7 @@
 ## you can use your own site (local network)
 ## important NO SLASH at end of repo
 repo="https://download.mikrotik.com/routeros"
+repo="http://ros.lucky.ltg"
 
 ## routeros version to upgrade
 rosver="7.6"
@@ -32,11 +33,13 @@ usage()
    echo
    echo -e "${Bold}Upgrade RouterOS using remote command${NC}"
    echo
-   echo -e "Usage: $0 [-u ${Italic}<username>${NC}] [-p ${Italic}<password>${NC}] [-P ${Italic}<ssh-port>${NC}] ${Blue}hostname${NC}"
+   echo -e "Usage: $0 [-u ${Italic}<username>${NC}] [-p ${Italic}<password>${NC}] [-P ${Italic}<ssh-port>${NC}] -v[${Italic}<version>${NC}] ${Blue}hostname1 [hostname2] [hostname3]${NC}"
    echo "options:"
    echo "   -u username   Provide username as argument (default \"admin\")"
    echo "   -p password   Provide password as argument (security unwise)"
    echo "   -P ssh-port   Provide ssh service port (default 22)"
+   echo "   -v version    RouterOS version to upgrade (default 22)"
+   echo "      hostname   Hostname list, list for multiple hostname"
    echo "   -h            Print this Help."
    echo
    exit 1
@@ -52,7 +55,8 @@ do
         u) username=${OPTARG};;
         p) password=${OPTARG};;
         P) port=${OPTARG};;
-        h ) usage
+        v) rosver=${OPTARG};;
+        h) usage
         exit 0;;
         *) usage
         exit 1;;
@@ -65,46 +69,55 @@ then
   usage
   exit 0
 else
-  host="$1"
+  hosts=("$@")
 fi
 
-rosinfo=`sshpass -p ${password} ssh -p ${port} -o "StrictHostKeyChecking no" ${username}@${host} "sys identi pr ; sys resource pr"`
+echo "==============================================================================="
+for host in "${hosts[@]}"
+do
+#  rosinfo="sshpass -p ${password} ssh -p ${port} -o \"StrictHostKeyChecking no\" ${username}@${host} \"sys identi pr ; sys resource pr\""
+#  echo "$rosinfo"
+  rosinfo=`sshpass -p ${password} ssh -p ${port} -o "StrictHostKeyChecking no" ${username}@${host} "sys identi pr ; sys resource pr"`
 
-arch=`echo "$rosinfo" | grep archi | cut -d ":" -f 2`
-rosid=`echo "$rosinfo" | grep " name:" | cut -d ":" -f 2`
-rosbn=`echo "$rosinfo" | grep "board-name:" | cut -d ":" -f 2`
-arch="${arch//[$'\t\r\n ']}"
-rosid="${rosid//[$'\t\r\n']}"
-rosbn="${rosbn//[$'\t\r\n']}"
-if [ -z "$arch" ]
-then
-  exit
-else
-  echo "==========================================================================="
-  echo -e "Updating :${Bold}${rosid}${NC}"
-  echo -e "IP       : ${Bold}${host}${NC}"
-  echo -e "Mikrotik :${Bold}${rosbn} ${NC}(${Bold}${arch}${NC})"
-fi
+  arch=`echo "$rosinfo" | grep archi | cut -d ":" -f 2`
+  rosid=`echo "$rosinfo" | grep " name:" | cut -d ":" -f 2`
+  rosbn=`echo "$rosinfo" | grep "board-name:" | cut -d ":" -f 2`
+  rosvn=`echo "$rosinfo" | grep "version:" | cut -d ":" -f 2`
+  arch="${arch//[$'\t\r\n ']}"
+  rosid="${rosid//[$'\t\r\n']}"
+  rosbn="${rosbn//[$'\t\r\n']}"
+  rosvn="${rosvn//[$'\t\r\n']}"
+  if [ -z "$arch" ]
+  then
+    echo -e "${Red}Host ${Blue}${host} ${Red}not Valid${NC}"
+  else
+    echo -e "Updating :${Bold}${rosid}${NC}"
+    echo -e "IP       : ${Bold}${host}${NC}"
+    echo -e "Mikrotik :${Bold}${rosbn} ${NC}(${Bold}${arch}${NC})"
+    echo -e "Version  :${Bold}${rosvn} ${NC}Upgrade to ${Bold}${rosver}${NC}"
+    if [ $arch == "x86_64" ]
+    then
+      arch=""
+    elif [ $arch == "powerpc" ]
+    then
+      arch="-ppc"
+    else
+      arch="-${arch}"
+    fi
 
-if [ $arch == "x86_64" ]
-then
-  arch=""
-elif [ $arch == "powerpc" ]
-then
-  arch="-ppc"
-else
-  arch="-${arch}"
-fi
+    url="${repo}/${rosver}/routeros-${rosver}${arch}.npk"
+    rosexec="sshpass -p ${password} ssh -p ${port} -o \"StrictHostKeyChecking no\" ${username}@${host} 'tool fetch url=\"${url}\" ; system reboot ;' && echo \"y\""
 
-url="${repo}/${rosver}/routeros-${rosver}${arch}.npk"
-rosexec="sshpass -p ${password} ssh -p ${port} -o \"StrictHostKeyChecking no\" ${username}@${host} 'tool fetch url=\"${url}\" ; system reboot ;' && echo \"y\""
+    rosupg=`echo -ne $(eval $rosexec)`
+    if [ -z "$rosupg" ]
+    then
+      echo -e "${Red}Upgrade Failed"
+    else
+      echo -e "${Green}Upgrade Succesfuly...${NC}"
+      echo -e "${Bold}Now Rebooting Device${NC}"
+    fi
+  fi
+  echo "==============================================================================="
+done
 
-rosupg=`echo -ne $(eval $rosexec)`
-if [ -z "$rosupg" ]
-then
-  echo -e "${Red}Upgrade Failed"
-else
-  echo -e "${Green}Upgrade Succesfuly...${NC}"
-  echo -e "${Bold}Now Rebooting Device${NC}"
-fi
-echo "==========================================================================="
+exit 0
