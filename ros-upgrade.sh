@@ -32,11 +32,13 @@ usage()
    echo
    echo -e "${Bold}Upgrade RouterOS using remote command${NC}"
    echo
-   echo -e "Usage: $0 [-u ${Italic}<username>${NC}] [-p ${Italic}<password>${NC}] [-P ${Italic}<ssh-port>${NC}] -v[${Italic}<version>${NC}] ${Blue}hostname1 [hostname2] [hostname3]${NC}"
+   echo -e "Usage: $0 [-u ${Italic}<username>${NC}] [-p ${Italic}<password>${NC}] [-P ${Italic}<ssh-port>${NC}] [-r ${Italic}<repo-url>${NC}] [-v ${Italic}<version>${NC}]"
+   echo -e "       ${Blue}hostname1 [hostname2] [hostname3]${NC}"
    echo "options:"
    echo "   -u username   Provide username as argument (default \"admin\")"
    echo "   -p password   Provide password as argument (security unwise)"
    echo "   -P ssh-port   Provide ssh service port (default 22)"
+   echo "   -r repo-url   Repository Site (default https://download.mikrotik.com/routeros)"
    echo "   -v version    RouterOS version to upgrade"
    echo "      hostname   Hostname list, list for multiple hostname"
    echo "   -h            Print this Help."
@@ -48,13 +50,14 @@ username="admin"
 password="\"\""
 port="22"
 
-while getopts hu:p:P: flag
+while getopts hr:u:p:P: flag
 do
     case "${flag}" in
         u) username=${OPTARG};;
         p) password=${OPTARG};;
         P) port=${OPTARG};;
         v) rosver=${OPTARG};;
+        r) repo=${OPTARG};;
         h) usage
         exit 0;;
         *) usage
