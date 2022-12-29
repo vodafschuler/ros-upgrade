@@ -32,7 +32,7 @@ usage()
    echo
    echo -e "${Bold}Upgrade RouterOS using remote command${NC}"
    echo
-   echo -e "Usage: $0 [-u ${Italic}<username>${NC}] [-p ${Italic}<password>${NC}] [-P ${Italic}<ssh-port>${NC}] -v[${Italic}<version>${NC}]"
+   echo -e "Usage: $0 [-u ${Italic}<username>${NC}] [-p ${Italic}<password>${NC}] [-P ${Italic}<ssh-port>${NC}] [-r ${Italic}<repo-url>${NC}] [-v ${Italic}<version>${NC}]"
    echo -e "       ${Blue}hostname1 [hostname2] [hostname3]${NC}"
    echo "options:"
    echo "   -u username   Provide username as argument (default \"admin\")"
