@@ -50,7 +50,7 @@ username="admin"
 password="\"\""
 port="22"
 
-while getopts hr:u:p:P: flag
+while getopts hr:u:p:P:v: flag
 do
     case "${flag}" in
         u) username=${OPTARG};;
