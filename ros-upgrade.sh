@@ -26,7 +26,6 @@ username="admin"
 password="\"\""
 wd=80
 repo="https://download.mikrotik.com/routeros"  # Add your actual repo URL
-repo="http://galaxy.lucky.ltg/source/RouterOS"  # Add your actual repo URL
 rosver="7.18.2"                 # Set your target version
 
 # Usage information
