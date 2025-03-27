@@ -26,7 +26,8 @@ username="admin"
 password="\"\""
 wd=80
 repo="https://download.mikrotik.com/routeros"  # Add your actual repo URL
-rosver="7.18.2"                                # Set your target version
+repo="http://galaxy.lucky.ltg/source/RouterOS"  # Add your actual repo URL
+rosver="7.18.2"                 # Set your target version
 
 # Usage information
 usage() {
@@ -91,7 +92,7 @@ print_separator() {
 }
 
 # Main processing
-print_separator
+printf '%*s\n' $wd | tr ' ' '='
 
 total_hosts=${#hosts[@]}
 for ((i=0; i<$total_hosts; i++)); do
@@ -124,8 +125,6 @@ for ((i=0; i<$total_hosts; i++)); do
             echo -e "    IP Address      : ${Bold}${host}${NC}"
             echo -e "    Board Model     : ${Bold}${rosbn}${NC}"
             echo -e "    Arch            : ${Bold}${arch}${NC}"
-            echo -e "    Version         : ${Bold}${rosvn}${NC}"
-            echo -e "    Upgrade Version : ${Bold}${rosver}${NC}"
 
             # Prepare architecture suffix
             if [ "$arch" == "x86_64" ]; then
@@ -136,28 +135,45 @@ for ((i=0; i<$total_hosts; i++)); do
                 arch="-${arch}"
             fi
 
-            # Upgrade process
-            url="${repo}/${rosver}/routeros-${rosver}${arch}.npk"
-            echo -e "\n  ${Yellow}Starting upgrade process...${NC}"
-            echo -e "    Download URL: ${Blue}${url}${NC}"
+	    # Upgrade process - only if target version is newer
+	    echo -e "\n  ${Purple}Version Check:${NC}"
+            echo -e "    Version         : ${Bold}${rosvn}${NC}"
+            echo -e "    Upgrade Version : ${Bold}${rosver}${NC}"
 
-            #rosexec="sshpass -p ${password} ssh -p ${port} -o \"StrictHostKeyChecking no\" ${username}@${host} 'tool fetch url=\"${url}\" ; system reboot ;' && echo \"y\""
-            rosexec="sshpass -p ${password} ssh -p ${port} -o \"StrictHostKeyChecking no\" ${username}@${host} 'tool fetch url=\"${url}\"' "
-            rosupg=$(eval "$rosexec")
+	    # Convert version numbers to comparable format
+	    current_ver=$(echo "$rosvn" | awk -F. '{ printf("%03d%03d%03d\n", $1,$2,$3); }')
+	    target_ver=$(echo "$rosver" | awk -F. '{ printf("%03d%03d%03d\n", $1,$2,$3); }')
 
-            if [ -z "$rosupg" ]; then
-                echo -e "    ${Red}Upgrade Failed${NC}"
-            else
-                echo -e "    ${Green}Upgrade Successful!${NC}"
-                echo -e "    ${Bold}Now Rebooting Device${NC}"
-            fi
+	    if [[ "$target_ver" > "$current_ver" ]]; then
+	        url="${repo}/${rosver}/routeros-${rosver}${arch}.npk"
+	        echo -e "\n  ${Yellow}Starting upgrade process (new version available)...${NC}"
+	        echo -e "    Download URL: ${Blue}${url}${NC}"
+
+	        rosexec="sshpass -p ${password} ssh -p ${port} -o \"StrictHostKeyChecking no\" ${username}@${host} 'tool fetch url=\"${url}\"'"
+	        rosupg=$(eval "$rosexec")
+
+	        if [ -z "$rosupg" ]; then
+	            echo -e "    ${Red}Upgrade Failed${NC}"
+	        else
+	            echo -e "    ${Green}Upgrade Successful!${NC}"
+	            echo -e "    ${Bold}Now Rebooting Device${NC}"
+	            reboot_exec="sshpass -p ${password} ssh -p ${port} -o \"StrictHostKeyChecking no\" ${username}@${host} 'system reboot ;' && echo \"y\""
+	            eval "$reboot_exec"
+	        fi
+	    elif [[ "$target_ver" == "$current_ver" ]]; then
+	        echo -e "    ${Green}Device already running target version ${rosver}${NC}"
+	    else
+	        echo -e "    ${Yellow}Device version ${rosvn} is newer than target ${rosver}${NC}"
+	        echo -e "    ${Yellow}Skipping upgrade${NC}"
+	    fi
         fi
+
     else
         echo -e "    ${Red}SSH Connection Failed to ${host}${NC}"
         echo -e "    Error message: ${rosinfo}"
     fi
-
     print_separator
 done
 
-echo -e "    \n${Green}Processing complete for all devices.${NC}"
+echo -e "  ${Green}Processing complete for all devices.${NC}"
+printf '%*s\n' $wd | tr ' ' '='
