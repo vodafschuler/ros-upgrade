@@ -30,17 +30,19 @@ This script use the software and how to install them.
 <!-- USAGE EXAMPLES -->
 ## Usage
 ```sh
-Upgrade RouterOS using remote command
+  Upgrade RouterOS using remote command
 
-Usage: /usr/bin/ros-upgrade [-u <username>] [-p <password>] [-P <ssh-port>] [-r <repo-url>] [-v <version>]
-       hostname1 [hostname2] [hostname3]
-options:
-   -u username   Provide username as argument (default "admin")
-   -p password   Provide password as argument (security unwise)
-   -P ssh-port   Provide ssh service port (default 22)
-   -r repo-url   Repository Site (default https://download.mikrotik.com/routeros)
-   -v version    RouterOS version to upgrade
-      hostname   Hostname list, list for multiple hostname
-   -h            Print this Help.
+    Usage: /usr/bin/ros-upgrade -f <filename> [options]
+       or: /usr/bin/ros-upgrade [-u <username>] [-p <password>] [-P <ssh-port>] [-r <repo-url>] [-v <version>]
+           hostname1 [hostname2] [hostname3]
+
+  Options:
+      -f filename   File containing list of hosts (format: IP Description)
+      -u username   SSH username (default: admin)
+      -p password   SSH password
+      -P port       SSH port (default: 22)
+      -r repo-url   Repository URL (default: https://download.mikrotik.com/routeros)
+      -v version    RouterOS target version (default: 7.18.2)
+      -h            Show this help message
 ```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
