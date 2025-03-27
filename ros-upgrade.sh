@@ -1,18 +1,13 @@
 #!/bin/bash
+## Mikrotik RouterOS Upgrade Script
+## Description: Script to upgrade multiple Mikrotik devices from a list
 ## If you haven't seen the Bash script before, it's worth a look. It truly IS terrifying.
 ## If this code works, it was written by si bloon. If not, I don't know who wrote it.
 ## If you're reading this, that means you have been screwed.
 ## I am so, so sorry for you. God speech.
 ## si bloon.
 
-## repository for routeros to download package
-## you can use your own site (local network)
-## important NO SLASH at end of repo
-repo="https://download.mikrotik.com/routeros"
-
-## routeros version to upgrade
-rosver="7.6"
-
+# Text Formatting
 Bold='\033[1m'           # Bold
 Italic='\033[3m'         # Italic
 Black='\033[1;30m'       # Black
@@ -22,102 +17,147 @@ Yellow='\033[1;33m'      # Yellow
 Blue='\033[1;34m'        # Blue
 Purple='\033[1;35m'      # Purple
 Cyan='\033[1;36m'        # Cyan
-White='\033[1;37m'       # Whit
+White='\033[1;37m'       # White
 NC='\033[0m'             # No Color
 
-# Usage
-usage()
-{
-   # Display Usage
-   echo
-   echo -e "${Bold}Upgrade RouterOS using remote command${NC}"
-   echo
-   echo -e "Usage: $0 [-u ${Italic}<username>${NC}] [-p ${Italic}<password>${NC}] [-P ${Italic}<ssh-port>${NC}] [-r ${Italic}<repo-url>${NC}] [-v ${Italic}<version>${NC}]"
-   echo -e "       ${Blue}hostname1 [hostname2] [hostname3]${NC}"
-   echo "options:"
-   echo "   -u username   Provide username as argument (default \"admin\")"
-   echo "   -p password   Provide password as argument (security unwise)"
-   echo "   -P ssh-port   Provide ssh service port (default 22)"
-   echo "   -r repo-url   Repository Site (default https://download.mikrotik.com/routeros)"
-   echo "   -v version    RouterOS version to upgrade"
-   echo "      hostname   Hostname list, list for multiple hostname"
-   echo "   -h            Print this Help."
-   echo
-   exit 1
-}
-
+# Configuration
+port="22"
 username="admin"
 password="\"\""
-port="22"
+wd=80
+repo="https://download.mikrotik.com/routeros"  # Add your actual repo URL
+rosver="7.18.2"                                # Set your target version
 
-while getopts hr:u:p:P:v: flag
-do
-    case "${flag}" in
-        u) username=${OPTARG};;
-        p) password=${OPTARG};;
-        P) port=${OPTARG};;
-        v) rosver=${OPTARG};;
-        r) repo=${OPTARG};;
-        h) usage
-        exit 0;;
-        *) usage
-        exit 1;;
+# Usage information
+usage() {
+     echo
+     echo -e "  ${Bold}Upgrade RouterOS using remote command${NC}"
+     echo
+     echo -e "    Usage: $0 ${Blue}-f <filename>${NC} [options]"
+     #echo -e "       or: $0 ${Blue}<hostname1> [hostname2] [hostname3]${NC} [options]"
+     echo -e "       or: $0 [-u ${Italic}<username>${NC}] [-p ${Italic}<password>${NC}] [-P ${Italic}<ssh-port>${NC}] [-r ${Italic}<repo-url>${NC}] [-v ${Italic}<version>${NC}]"
+     echo -e "           ${Blue}hostname1 [hostname2] [hostname3]${NC}"
+     echo
+     echo "  Options:"
+     echo -e "      ${Yellow}-f filename${NC}   File containing list of hosts (format: IP Description)"
+     echo -e "      ${Yellow}-u username${NC}   SSH username (default: admin)"
+     echo -e "      ${Yellow}-p password${NC}   SSH password"
+     echo -e "      ${Yellow}-P port${NC}       SSH port (default: 22)"
+     echo -e "      ${Yellow}-r repo-url${NC}   Repository URL (default: https://download.mikrotik.com/routeros)"
+     echo -e "      ${Yellow}-v version${NC}    RouterOS target version (default: 7.18.2)"
+     echo -e "      ${Yellow}-h${NC}            Show this help message"
+     echo
+     exit 1
+}
+
+# Parse command line options and hosts
+positional_args=()
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -u) username="$2"; shift 2 ;;
+        -p) password="$2"; shift 2 ;;
+        -P) port="$2"; shift 2 ;;
+        -r) repo="$2"; shift 2 ;;
+        -v) rosver="$2"; shift 2 ;;
+        -f) route_file="$2"; shift 2 ;;
+        -h) usage ;;
+        --) shift; positional_args+=("$@"); break ;;
+        -*) echo -e "    ${Red}Unknown option: $1${NC}" >&2; usage ;;
+        *) positional_args+=("$1"); shift ;;
     esac
 done
-shift "$((OPTIND-1))"
 
-if [ -z "$1" ]
-then
-  usage
-  exit 0
-else
-  hosts=("$@")
+# Set hosts from positional arguments
+hosts=("${positional_args[@]}")
+
+# Validate required parameters
+# Mode file atau host langsung
+if [ -n "$route_file" ]; then
+    # Mode file - validate file
+    if [ ! -f "$route_file" ]; then
+        echo -e "    ${Red}Error: File '$route_file' not found!${NC}"
+        exit 1
+    fi
+    mapfile -t file_hosts < <(grep -v '^---' "$route_file" | awk '{print $1}')
+    hosts=("${file_hosts[@]}")
+elif [ ${#hosts[@]} -eq 0 ]; then
+    echo -e "    ${Red}Error: Either -f <filename> or host list required${NC}"
+    usage
 fi
 
-echo "==============================================================================="
-for host in "${hosts[@]}"
-do
-  rosinfo=`sshpass -p ${password} ssh -p ${port} -o "StrictHostKeyChecking no" ${username}@${host} "sys identi pr ; sys resource pr"`
+# Function to print separator line
+print_separator() {
+    printf '%*s\n' $wd | tr ' ' '-'
+}
 
-  arch=`echo "$rosinfo" | grep archi | cut -d ":" -f 2`
-  rosid=`echo "$rosinfo" | grep " name:" | cut -d ":" -f 2`
-  rosbn=`echo "$rosinfo" | grep "board-name:" | cut -d ":" -f 2`
-  rosvn=`echo "$rosinfo" | grep "version:" | cut -d ":" -f 2`
-  arch="${arch//[$'\t\r\n ']}"
-  rosid="${rosid//[$'\t\r\n']}"
-  rosbn="${rosbn//[$'\t\r\n']}"
-  rosvn="${rosvn//[$'\t\r\n']}"
-  if [ -z "$arch" ]
-  then
-    echo -e "${Red}Host ${Blue}${host} ${Red}not Valid${NC}"
-  else
-    echo -e "Updating :${Bold}${rosid}${NC}"
-    echo -e "IP       : ${Bold}${host}${NC}"
-    echo -e "Mikrotik :${Bold}${rosbn} ${NC}(${Bold}${arch}${NC})"
-    echo -e "Version  :${Bold}${rosvn} ${NC}Upgrade to ${Bold}${rosver}${NC}"
-    if [ $arch == "x86_64" ]
-    then
-      arch=""
-    elif [ $arch == "powerpc" ]
-    then
-      arch="-ppc"
-    else
-      arch="-${arch}"
+# Main processing
+print_separator
+
+total_hosts=${#hosts[@]}
+for ((i=0; i<$total_hosts; i++)); do
+    host="${hosts[$i]}"
+    
+    echo -e "  ${Cyan}Processing Host   : ${Bold}$host${NC}"
+    # Get description from file if available
+    if [ -n "$route_file" ] && [ -f "$route_file" ]; then
+        line=$(grep "^$host" "$route_file" 2>/dev/null)
+        if [ -n "$line" ]; then
+            id=$(echo "$line" | sed -E 's/^[[:space:]]*[^[:space:]]+[[:space:]]+//')
+            echo -e "    ${Yellow}Description     : $id${NC}"
+        fi
     fi
 
-    url="${repo}/${rosver}/routeros-${rosver}${arch}.npk"
-    rosexec="sshpass -p ${password} ssh -p ${port} -o \"StrictHostKeyChecking no\" ${username}@${host} 'tool fetch url=\"${url}\" ; system reboot ;' && echo \"y\""
+    # SSH execution with error handling
+    if rosinfo=$(sshpass -p "$password" ssh -n -p "$port" -o "StrictHostKeyChecking=no" -o "ConnectTimeout=5" "$username@$host" "/sys identity print ; /sys resource print" 2>&1); then
+        # Extract system information
+        rosid=$(echo "$rosinfo" | awk -F': ' '/^[[:space:]]*name:/ {sub(/\r/,"",$2); print $2}' | head -n1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        arch=$(echo "$rosinfo" | awk -F': ' '/^[[:space:]]*architecture-name:/ {sub(/\r/,"",$2); print $2}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        rosbn=$(echo "$rosinfo" | awk -F': ' '/^[[:space:]]*board-name:/ {sub(/\r/,"",$2); print $2}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        rosvn=$(echo "$rosinfo" | awk -F': ' '/^[[:space:]]*version:/ {sub(/\r/,"",$2); print $2}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
-    rosupg=`echo -ne $(eval $rosexec)`
-    if [ -z "$rosupg" ]
-    then
-      echo -e "${Red}Upgrade Failed"
+        if [ -z "$arch" ]; then
+            echo -e "    ${Red}Host ${Blue}${host} ${Red}not Valid${NC}"
+        else
+            # Display device info
+            echo -e "\n  ${Green}Device Information:${NC}"
+            echo -e "    Identity        : ${Bold}${rosid}${NC}"
+            echo -e "    IP Address      : ${Bold}${host}${NC}"
+            echo -e "    Board Model     : ${Bold}${rosbn}${NC}"
+            echo -e "    Arch            : ${Bold}${arch}${NC}"
+            echo -e "    Version         : ${Bold}${rosvn}${NC}"
+            echo -e "    Upgrade Version : ${Bold}${rosver}${NC}"
+
+            # Prepare architecture suffix
+            if [ "$arch" == "x86_64" ]; then
+                arch=""
+            elif [ "$arch" == "powerpc" ]; then
+                arch="-ppc"
+            else
+                arch="-${arch}"
+            fi
+
+            # Upgrade process
+            url="${repo}/${rosver}/routeros-${rosver}${arch}.npk"
+            echo -e "\n  ${Yellow}Starting upgrade process...${NC}"
+            echo -e "    Download URL: ${Blue}${url}${NC}"
+
+            #rosexec="sshpass -p ${password} ssh -p ${port} -o \"StrictHostKeyChecking no\" ${username}@${host} 'tool fetch url=\"${url}\" ; system reboot ;' && echo \"y\""
+            rosexec="sshpass -p ${password} ssh -p ${port} -o \"StrictHostKeyChecking no\" ${username}@${host} 'tool fetch url=\"${url}\"' "
+            rosupg=$(eval "$rosexec")
+
+            if [ -z "$rosupg" ]; then
+                echo -e "    ${Red}Upgrade Failed${NC}"
+            else
+                echo -e "    ${Green}Upgrade Successful!${NC}"
+                echo -e "    ${Bold}Now Rebooting Device${NC}"
+            fi
+        fi
     else
-      echo -e "${Green}Upgrade Succesfuly...${NC}"
-      echo -e "${Bold}Now Rebooting Device${NC}"
+        echo -e "    ${Red}SSH Connection Failed to ${host}${NC}"
+        echo -e "    Error message: ${rosinfo}"
     fi
-  fi
-  echo "==============================================================================="
+
+    print_separator
 done
 
-exit 0
+echo -e "    \n${Green}Processing complete for all devices.${NC}"
