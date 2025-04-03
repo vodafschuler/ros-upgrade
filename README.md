@@ -32,8 +32,8 @@ This script use the software and how to install them.
 ```sh
   Upgrade RouterOS using remote command
 
-    Usage: /usr/bin/ros-upgrade -f <filename> [options]
-       or: /usr/bin/ros-upgrade [-u <username>] [-p <password>] [-P <ssh-port>] [-r <repo-url>] [-v <version>]
+    Usage: ./ros-upgrade -f <filename> [options]
+       or: ./ros-upgrade [-u <username>] [-p <password>] [-P <ssh-port>] [-r <repo-url>] [-v <version>] [-R <yes/no>]
            hostname1 [hostname2] [hostname3]
 
   Options:
@@ -43,6 +43,8 @@ This script use the software and how to install them.
       -P port       SSH port (default: 22)
       -r repo-url   Repository URL (default: https://download.mikrotik.com/routeros)
       -v version    RouterOS target version (default: 7.18.2)
+      -R [yes/no]    Auto reboot after upgrade (default: no, use -R alone for yes)
+      -a packages   Additional packages to install (comma-separated)
       -h            Show this help message
 ```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
